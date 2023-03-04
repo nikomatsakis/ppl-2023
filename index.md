@@ -2,14 +2,14 @@ class: center
 name: title
 count: false
 
-# Talk Template
+# Next steps for the Rust type system
 
 .p60[![Ferris](./images/ferris.svg)]
 
 Don't forget to update the title in [index.html](./index.html)
 
 .me[.grey[*by* **Nicholas Matsakis**]]
-.left[.citation[View slides at `https://nikomatsakis.github.io/talkrepo/`]]
+.left[.citation[View slides at `https://nikomatsakis.github.io/ppl-2023/`]]
 
 ---
 
