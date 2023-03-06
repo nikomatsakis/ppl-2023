@@ -418,7 +418,7 @@ mark,
 
 .line6 img {
   position: absolute;
-  top: 270px;
+  top: 260px;
   left: 10px;
   width: 50px;
 }
@@ -570,6 +570,13 @@ blockquote p {
 .errorline5 {
   position: absolute;
   top: 260px;
+  left: 70px;
+  width: 50px;
+}
+
+.errorline6 {
+  position: absolute;
+  top: 280px;
   left: 70px;
   width: 50px;
 }
