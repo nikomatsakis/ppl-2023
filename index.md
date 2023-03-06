@@ -987,6 +987,86 @@ Not quite.
 
 ---
 
+# Coherence flaw: no way to say no
+
+```rust
+trait MyTrait { }
+
+impl<T> MyTrait for T where T: Display { }
+
+impl<E> MyTrait for Vec<E> { } ❌
+```
+
+- Vec will _never_ implement `Display`
+- But type system doesn't know that!
+
+---
+
+# Coherence flaw: holds back library interop
+
+Consider:
+
+- serde: widely used crate that defines serialization traits
+- petgraph: widely used crate to represent graphs
+
+--
+
+Suppose I want serializable graphs?
+
+- either serde must implement its traits for petgraph
+- or petgraph must implement serde traits for its types
+
+...but maybe neither crate wants to?
+
+---
+
+# Lifting the coherence rules (active work)
+
+--
+
+<u>Marker traits</u> ([implemented, pending stabilization][mt])
+
+[mt]: https://github.com/rust-lang/rust/issues/29864
+
+```rust
+trait MyMarkerTrait { /* nothing here */ }
+```
+
+--
+
+<u>Explicit negative impls</u> ([active initiative][ni])
+
+[ni]: https://github.com/rust-lang/negative-impls-initiative
+
+```rust
+impl<E> !Display for Vec<E> { }
+```
+
+---
+
+# Lifting the coherence rules (speculative)
+
+--
+
+<u>Permit impls in leaf crates</u> ([blog post][clwc])
+
+[clwc]: https://smallcultfollowing.com/babysteps/blog/2022/04/17/coherence-and-crate-level-where-clauses/
+
+```rust
+impl serde::Serialize for petgraph::Graph { }
+```
+
+--
+
+<u>Permit identical duplicates</u>
+
+```rust
+#[derive(serde::Serialize)]
+struct petgraph::Graph;
+```
+
+---
+
 # Common pattern: extension methods
 
 ```rust
@@ -1050,27 +1130,232 @@ Idea:
 
 # Lesson #3
 
-### Portability as a first-class concern
+### Everyone cares about portability...
 
 ---
 
-# Library-oriented language
+# Lesson #3
 
-Like C++, Rust aims to be _extensible_
-
-- extension methods, overloadable operators (including `for`)
-- minimal standard library
-- relative simple core language
-
-Note: _minimality_ is not the goal, _extensibility_ is.
+### Everyone cares about portability...almost
 
 ---
 
-# Batteries included...?
+Rust distinguishes
 
-We opted to design
+- Fixed-size integers (`u32`, `u64`, etc)
+- Platform-dependent integers (`usize`)
 
-- mimimal standard library (maybe could've been even more minimal)
+---
+
+# Strict == good
+
+```rust
+fn main() {
+    let x: usize = 22;
+    let y: u32 = x; ❌ // cannot convert `usize` to `u32`
+}
+```
+
+.line3[![Arrow](./images/Arrow.png)]
+
+---
+
+name: from-trait
+
+# From trait permits safe interconversions
+
+```rust
+trait From<T> {
+    fn from(value: T) -> Self;
+}
+
+...
+
+let x = TargetType::from(y);
+```
+
+---
+
+template: from-trait
+
+.line2[![Arrow](./images/Arrow.png)]
+
+---
+
+template: from-trait
+
+.line7[![Arrow](./images/Arrow.png)]
+
+works if there is a `From` impl, errors if not
+
+---
+
+name: from-impls
+
+# From impls for cases that don't lose data
+
+```rust
+impl From<u32> for u64 { }
+
+fn main() {
+    let x: u32 = 22;
+    let y: u64 = u64::from(x); ✅ // ok
+}
+```
+
+---
+
+template: from-impls
+
+.line1[![Arrow](./images/Arrow.png)]
+
+---
+
+template: from-impls
+
+.line5[![Arrow](./images/Arrow.png)]
+
+---
+
+# From trait won't let you lose data
+
+```rust
+fn main() {
+    let x: u64 = 22;
+    let y: u32 = u32::from(x); ❌ // no such impl
+}
+```
+
+.line3[![Arrow](./images/Arrow.png)]
+
+---
+
+# For fallible conversions, there is TryFrom
+
+```rust
+trait TryFrom<T> {
+    fn try_from(value: T) -> Option<Self>;
+}
+```
+
+.footnote[NB. Slightly simplified from the actual trait.]
+
+---
+
+# Using TryFrom
+
+```rust
+fn main() {
+    let x: u64 = 22;
+    match u32::try_from(x) {
+        Some(y) => /* ok */,
+        None => /* overflow */,
+    }
+}
+```
+
+---
+
+# What if I am targeting only 32 bit?
+
+```rust
+fn store_results(v: u32) { }
+```
+
+You might think, ok, I just use `u32` everywhere
+
+---
+
+# What if I am targeting only 32 bit?
+
+```rust
+fn store_results(v: u32) { }
+
+fn process_data(data: &[u32]) {
+    let l: usize = data.len();
+    store_results(l); ❌ // cannot convert `usize` to `u32`
+}
+```
+
+...but `usize` leak in!
+
+---
+
+# unwrap is plausible, but risky
+
+```rust
+fn store_results(v: u32) { }
+
+fn process_data(data: &[u32]) {
+    let l: usize = data.len();
+    store_results(u32::try_from(l).unwrap()); ✅
+}
+```
+
+.line5[![Arrow](./images/Arrow.png)]
+
+Forfeiting compiler checks, back in C land.
+
+---
+
+# Could use conditional compilation
+
+```rust
+#[cfg(platform_is_32_bit)]
+impl From<usize> for u32
+{...}
+```
+
+but:
+
+- bad for docs
+- bad for CI/CD
+- bad for IDEs
+
+---
+
+# What if we leveraged where clauses?
+
+```rust
+impl<E> Debug for Vec<E>
+where
+    E: Debug,
+{...}
+```
+
+.line3[![Arrow](./images/Arrow.png)]
+
+---
+
+# Where clauses for platform details
+
+```rust
+impl From<usize> for u32
+where
+    Platform: Has32Bits,
+{...}
+```
+
+.line3[![Arrow](./images/Arrow.png)]
+
+--
+
+Here:
+
+- `Platform` is some global _resource type_ whose precise value is hidden during compilation
+- `Has32Bits` is a trait defined in stdlib
+
+---
+
+# "Resource types"
+
+Proposal around this is under active discussion. Uses:
+
+- Alternative to `#[cfg]` for writing portable code
+- Portability across global allocators
+- Portability across panic handling modes
+- Portability across async runtimes
+- ...
 
 ---
 
@@ -1079,4 +1364,6 @@ We opted to design
 - "Simple language != Simple to use"
   - Smarter, more expressive borrow checker
 - "Play four-dimensional chess"
-- "Portability as a first-class concern"
+  - Languages features to permit more evolution
+- "Everyone cares about portability...almost"
+  - Where-clauses >> conditional compilation
