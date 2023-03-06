@@ -1285,6 +1285,8 @@ Idea:
 
 ---
 
+# Careful with your integers
+
 Rust distinguishes
 
 - Fixed-size integers (`u32`, `u64`, etc)
