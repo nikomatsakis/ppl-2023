@@ -1252,15 +1252,13 @@ Compiler resolves `cartesian_product` to a method from `IteratorExt`
 use itertools::IteratorExt;
 
 some_iterator
-    .cartesian_product(another_iterator)
+    .cartesian_product(another_iterator) ❌
     .foreach(|(a, b)| ...);
 ```
 
 What if we want to bring `cartesian_product` into the stdlib for all iterators?
 
-.errorline5[❌]
-
-Ambiguity: which `cartesian_product` method did you want?
+❌ Ambiguity: which `cartesian_product` method did you want?
 
 ---
 
@@ -1277,7 +1275,7 @@ Idea:
 
 # Lesson #3
 
-### Everyone cares about portability...
+### Everyone wants portability...
 
 ---
 
