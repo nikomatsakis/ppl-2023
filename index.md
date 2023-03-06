@@ -666,11 +666,11 @@ name: polonius-code
 
 ```rust
 fn get_or_insert<K, V>(map: &mut Map<K, V>, key: K) -> &mut V {
-    if let Some(value) = map.get_mut(&key) {
+    if let Some(value) = get_mut(&mut map, &key) {
         return value;
     }
 
-    map.insert(key, default_value());
+    insert(&mut map, &key, default_value());
     return &mut map[&key];
 }
 ```
@@ -682,6 +682,12 @@ template: polonius-code
 .line2[![Arrow](./images/Arrow.png)]
 
 `get_mut` returns reference into the map for the given key
+
+```rust
+fn get_mut<'m ,K, V>(m: &'m mut Map<K, V>), k: &K -> Option<&'m mut V>
+//                       --                                  --
+//                      "Return a reference into the map `m`"
+```
 
 ---
 
@@ -709,6 +715,54 @@ and return that
 
 ---
 
+template: polonius-code
+
+.line2[![Arrow](./images/Arrow.png)]
+
+Borrow starts at `get_mut`, and it may _seem_ confined...
+
+.borrowp_right[}]
+
+---
+
+template: polonius-code
+
+.line3[![Arrow](./images/Arrow.png)]
+
+...but the compiler sees that the reference `value` is ultimately going to be returned...
+
+---
+
+template: polonius-code
+
+.line2[![Arrow](./images/Arrow.png)]
+.line3[![Arrow](./images/Arrow.png)]
+
+...and `value` is derived from the call to `get_mut`...
+
+---
+
+template: polonius-code
+
+.line2[![Arrow](./images/Arrow.png)]
+
+...so it decides that the borrow from `get_mut` must flow until the end of the function, and hence `insert` is in error.
+
+.borrowp1_right[}]
+
+.errorline6[❌]
+
+---
+
+# Polonius
+
+Remake the analysis to be based on "where reference came from" rather than "where is it used". Avoids this problem.
+
+See more: https://nikomatsakis.github.io/rust-belt-rust-2019/
+
+---
+
 # After Rust 2024...?
 
 - [View types](https://smallcultfollowing.com/babysteps//blog/2021/11/05/view-types/)
+- Interior references
