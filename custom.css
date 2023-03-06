@@ -444,9 +444,37 @@ mark,
   width: 50px;
 }
 
+.line6 img {
+  position: absolute;
+  top: 275px;
+  left: 10px;
+  width: 50px;
+}
+
 .line7 img {
   position: absolute;
-  top: 300px;
+  top: 285px;
+  left: 10px;
+  width: 50px;
+}
+
+.line8 img {
+  position: absolute;
+  top: 315px;
+  left: 10px;
+  width: 50px;
+}
+
+.line9 img {
+  position: absolute;
+  top: 345px;
+  left: 10px;
+  width: 50px;
+}
+
+.line10 img {
+  position: absolute;
+  top: 375px;
   left: 10px;
   width: 50px;
 }
@@ -521,3 +549,134 @@ blockquote p {
 }
 
 .group {}
+
+
+.text300 {
+  font-size: 300%;
+}
+
+
+
+.p20 img {
+  width: 20%;
+}
+
+.opened img {
+  position: absolute;
+  top: 340px;
+  left: 200px;
+  width: 50px;
+  transform: rotate(200deg);
+}
+
+.borrowbracket_left {
+  position: absolute;
+  top: 160px;
+  left: 5px;
+  width: 50px;
+  color: red;
+  font-size: 4.5em;
+}
+
+.borrowbracket_right {
+  position: absolute;
+  top: 160px;
+  left: 450px;
+  width: 50px;
+  font-size: 4.5em;
+  color: red;
+}
+
+.errorline4 {
+  position: absolute;
+  top: 228px;
+  left: 70px;
+  width: 50px; 
+}
+
+
+.errorline5 {
+  position: absolute;
+  top: 228px;
+  left: 70px;
+  width: 50px; 
+}
+
+
+.errorline6 {
+  position: absolute;
+  top: 255px;
+  left: 70px;
+  width: 50px; 
+}
+
+.borrow2018_left {
+  position: absolute;
+  top: 180px;
+  left: 5px;
+  width: 50px;
+  color: red;
+  font-size: 2.5em;
+}
+
+.borrow2018_right {
+  position: absolute;
+  top: 180px;
+  left: 450px;
+  width: 50px;
+  font-size: 2.5em;
+  color: red;
+}
+
+.borrowc_left {
+  position: absolute;
+  top: 290px;
+  left: 5px;
+  width: 50px;
+  color: red;
+  font-size: 3em;
+}
+
+.borrowc_right {
+  position: absolute;
+  top: 290px;
+  left: 450px;
+  width: 50px;
+  font-size: 3em;
+  color: red;
+}
+
+
+.errorline8 {
+  position: absolute;
+  top: 335px;
+  left: 70px;
+  width: 50px; 
+}
+
+
+.borrowcd_left {
+  position: absolute;
+  top: 347px;
+  left: 5px;
+  width: 50px;
+  color: red;
+  font-size: 4em;
+}
+
+.borrowcd_right {
+  position: absolute;
+  top: 347px;
+  left: 530px;
+  width: 50px;
+  font-size: 4em;
+  color: red;
+}
+
+
+.errorline9 {
+  position: absolute;
+  top: 365px;
+  left: 70px;
+  width: 50px; 
+}
