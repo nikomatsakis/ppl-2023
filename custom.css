@@ -379,37 +379,9 @@ mark,
   width: 50px;
 }
 
-.line2r img {
-  position: absolute;
-  top: 152px;
-  left: 50%;
-  width: 50px;
-  transform: translateX(-100%);
-}
-
-.line2-data img {
-  position: absolute;
-  top: 125px;
-  left: 675px;
-  width: 50px;
-  transform: rotate(45deg);
-}
-
-.annotate-data {
-  position: absolute;
-  top: 200px;
-  left: 600px;
-}
-
-.annotate-send {
-  position: absolute;
-  top: 200px;
-  left: 400px;
-}
-
 .line3 img {
   position: absolute;
-  top: 183px;
+  top: 170px;
   left: 10px;
   width: 50px;
 }
@@ -589,7 +561,7 @@ blockquote p {
 
 .errorline4 {
   position: absolute;
-  top: 228px;
+  top: 218px;
   left: 70px;
   width: 50px; 
 }
@@ -597,7 +569,7 @@ blockquote p {
 
 .errorline5 {
   position: absolute;
-  top: 228px;
+  top: 245px;
   left: 70px;
   width: 50px; 
 }

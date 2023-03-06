@@ -762,7 +762,321 @@ See more: https://nikomatsakis.github.io/rust-belt-rust-2019/
 
 ---
 
-# After Rust 2024...?
+# After Rust 2024? View types?
 
-- [View types](https://smallcultfollowing.com/babysteps//blog/2021/11/05/view-types/)
-- Interior references
+```rust
+struct MyType {
+    counter: u32,
+    map: Map<K, V>
+}
+
+impl MyType {
+    fn increment_counter(&mut self) {
+        self.counter += 1;
+    }
+}
+```
+
+.line8[![Arrow](./images/Arrow.png)]
+
+`increment_counter` borrows _the whole struct_...
+
+...but it only modifies _one field_ (`counter`)
+
+---
+
+# After Rust 2024? View types?
+
+```rust
+struct MyType {
+    counter: u32,
+    map: Map<K, V>
+}
+
+impl MyType {
+    fn increment_counter(&mut {counter} self) {
+        self.counter += 1;
+    }
+}
+```
+
+.line7[![Arrow](./images/Arrow.png)]
+
+Can we declare that?
+
+.footnote[
+Read more at https://smallcultfollowing.com/babysteps//blog/2021/11/05/view-types/
+]
+
+---
+
+# After Rust 2024? Interior references?
+
+```rust
+struct Pair {
+    data: Map<K, V>,
+    element: &'self.data mut V, // borrowed from `data` field
+}
+```
+
+Rust borrows are always confined to a stack frame right now.
+
+Can we store them in a struct?
+
+---
+
+# Lesson #2
+
+### Play four-dimensional chess
+
+Have to think about what happens people edit their programs.
+
+Flexibility, preventing errors is in tension with program evolution.
+
+---
+
+# Rust traits
+
+```rust
+trait Datum {
+    fn is_significant(&self) -> bool;
+}
+```
+
+---
+
+# Implementing a trait
+
+```rust
+impl Datum for u32 {
+    fn is_significant(&self) -> bool {
+        self > 10
+    }
+}
+```
+
+---
+
+# Invariant: at most one impl for a given type
+
+Within one library, can check this readily enough.
+
+--
+
+...but across libraries?
+
+---
+
+# Libraries
+
+- Crate A: declares `Datum` trait
+- Crate B: implements `Datum` for `u32` and checks `self > 10`
+- Crate C: implements `Datum` for `u32` and checks `self != 0`
+- Crate D: depends on both B and C
+
+Which definition of `Datum` for `u32` do we use?
+
+---
+
+# Orphan rules (simplified)
+
+Borrow a rule from Haskell...
+
+- Can only implement a trait if...
+  - you created the trait _or_
+  - you created the type
+
+--
+
+Under this rule:
+
+- Crate A: declares `Datum` trait ✅
+- Crate B: implements `Datum` for `u32` ❌ _did not declare `Datum` or `u32`_
+- Crate C: implements `Datum` for `u32` ❌ _did not declare `Datum` or `u32`_
+
+---
+
+# Libraries
+
+- Crate A: declares `Datum` trait ✅
+- Crate B: declares `DataB`, implements `Datum` for `DataB` ✅
+- Crate C: declares `DataC`, implements `Datum` for `DataC` ✅
+- Crate D: depends on both A, B, and C ✅
+
+No problem.
+
+---
+
+# Evolution over time
+
+- Crate A v1.0: declares `Datum` trait ✅
+- Crate B v1.0: declares `DataA` (but doesn't implement `Datum`)
+- Crate D v1.0: depends on A, B ✅
+
+---
+
+# Evolution over time
+
+- Crate A v1.0: declares `Datum` trait ✅
+- ~~Crate B v1.0~~: declares `DataB` (but doesn't implement `Datum`)
+- Crate B v1.1: declares `DataB` and implements `DataB` for `Datum`
+- Crate D v1.0: depends on both A and B ✅ (or is it?)
+
+---
+
+# But wait...
+
+```rust
+// Crate D
+trait Process { ... }
+
+impl<D: Datum> Process for D { ... }
+
+// In v1.0, DataB did not implement Datum
+impl Process for DataB { ... }
+```
+
+- Crate D can declare its own trait, say `Process` and give two impls...
+  - one for any `Datum`
+  - one for `DataB` (which is not a `Datum`)
+
+---
+
+# Wait for it...
+
+- Crate A v1.0: declares `Datum` trait ✅
+- Crate B v1.0: declares `DataA` (but doesn't implement `Datum`)
+- Crate D v1.0: declares and implements `Process` for:
+  - `D: Datum`
+  - `DataA` ✅
+
+---
+
+# ...there it is
+
+- Crate A v1.0: declares `Datum` trait ✅
+- ~~Crate B v1.0~~: declares `DataB` (but doesn't implement `Datum`)
+- Crate B v1.1: declares `DataB` and implements `DataB` for `Datum`
+- Crate D v1.0: declares and implements `Process` for:
+  - `D: Datum`
+  - `DataA` ❌ -- overlaps with the other impl
+
+Implication:
+
+- Adding a new impl would not be a forwards compatible change.
+
+---
+
+# "Rebalancing coherence"
+
+- Crate A v1.0: declares `Datum` trait ✅
+- Crate B v1.0: declares `DataA` (but doesn't implement `Datum`)
+- Crate D v1.0: declares and implements `Process` for:
+  - `D: Datum`
+  - `DataA` ❌ -- cannot assume that `DataA` will not implement in the future
+
+Fixed with a kind of "modal logic", shortly before 1.0:
+
+- To prove impls are disjoint, must consider impls that may be added backwards compatibly.
+
+---
+
+# Problem solved...?
+
+Not quite.
+
+---
+
+# Common pattern: extension methods
+
+```rust
+// Itertools crate
+trait IteratorExt {
+    fn cartesian_product(...);
+}
+
+impl<I> IteratorExt for I
+where
+    I: Iterator,
+{...}
+```
+
+---
+
+# Common pattern: extension methods
+
+```rust
+// client crate
+use itertools::IteratorExt;
+
+some_iterator
+    .cartesian_product(another_iterator)
+    .foreach(|(a, b)| ...);
+```
+
+Compiler resolves `cartesian_product` to a method from `IteratorExt`
+
+---
+
+# Standard library
+
+```rust
+// client crate
+use itertools::IteratorExt;
+
+some_iterator
+    .cartesian_product(another_iterator)
+    .foreach(|(a, b)| ...);
+```
+
+What if we want to bring `cartesian_product` into the stdlib for all iterators?
+
+.errorline5[❌]
+
+Ambiguity: which `cartesian_product` method did you want?
+
+---
+
+# Rust 2024?
+
+![RFC 3240](./images/RFC3240.png)
+
+Idea:
+
+- modify method dispatch to consider when method was defined
+- allows us to add new methods without affecting existing code
+
+---
+
+# Lesson #3
+
+### Portability as a first-class concern
+
+---
+
+# Library-oriented language
+
+Like C++, Rust aims to be _extensible_
+
+- extension methods, overloadable operators (including `for`)
+- minimal standard library
+- relative simple core language
+
+Note: _minimality_ is not the goal, _extensibility_ is.
+
+---
+
+# Batteries included...?
+
+We opted to design
+
+- mimimal standard library (maybe could've been even more minimal)
+
+---
+
+# Lessons
+
+- "Simple language != Simple to use"
+  - Smarter, more expressive borrow checker
+- "Play four-dimensional chess"
+- "Portability as a first-class concern"
