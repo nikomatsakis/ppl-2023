@@ -1136,7 +1136,7 @@ Idea:
 
 # Lesson #3
 
-### Everyone cares about portability...almost
+### Everyone wants portability...unless they don't
 
 ---
 
@@ -1372,6 +1372,6 @@ Proposal around this is under active discussion. Uses:
   - ⚙️ Negative impls (Rust 2024)
   - ⚙️ Edition-dependent method dispatch (Rust 2024)
   - ❓ Better coherence rules
-- "Everyone cares about portability...almost"
+- "Everyone Everyone wants portability...unless they don't"
   - ✅ strict usize/u32, `From`/`TryFrom`, etc
   - ⚙️ Where-clause based portability rules (unclear)
