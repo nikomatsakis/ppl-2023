@@ -231,7 +231,7 @@ template: bcs
 
 +-----+    +------------+      +-----------+
 |  v  +--> |data        +----> | "...."    |
-|     |    |size      1 |      | "Hello"   |
+|     |    |size      2 |      | "Hello"   |
 +-----+    |capacity  2 |      +-----------+
            +------------+
 ```
@@ -272,6 +272,36 @@ template: bcs
 
 ---
 
+template: bcs
+
+.line5[![Arrow](./images/Arrow.png)]
+
+```
+                           +-----------------+
++-----+    +------------+  |   +-----------+ | +-------------+
+|  v  +--> |data        +--+   | XXXXXXX   | +>+ "..."       |
+|  s  +--+ |size      3 |  +-> | XXXXXXX   |   | "Hello"     |
++-----+  | |capacity  4 |  |   +-----------+   | "World"     |
+         | +------------+  |                   |             |
+         |                 |                   +-------------+
+         +-----------------+
+```
+
+--
+
+.line5boom[💥]
+
+
+---
+
+# What happens in Rust?
+
+[Let's try it](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d24963f6ba269ccb2a5e4a9e595c774f)
+
+---
+
+name: borrows
+
 # Rust rules: _borrows_
 
 ```rust
@@ -283,15 +313,49 @@ fn test(v: &mut Vec<String>) {
 }
 ```
 
+---
+
+template: borrows
+
+.line3[![Arrow](./images/Arrow.png)]
+
+---
+
+template: borrows
+
+.borrowbracket_left[{]
+
+.borrowbracket_right[}]
+
+`v` is considered *borrowed* for this region of code.
+
+`v` cannot be modified while it is borrowed.
+
+---
+
+template: borrows
+
 .borrowbracket_left[{]
 
 .borrowbracket_right[}]
 
 .errorline4[❌]
 
+```
+error[E0502]: cannot borrow `*v` as mutable because it is also borrowed as immutable
+ --> src/lib.rs:4:5
+  |
+3 |     let s: &String = &v[v.len() - 1];
+  |                       - immutable borrow occurs here
+4 |     v.push("World".to_string());
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+5 |     print(s);
+  |           - immutable borrow later used here
+```
+
 ---
 
-# What happens now?
+# What happens if we swap the last two lines?
 
 ```rust
 fn test(v: &mut Vec<String>) {
@@ -303,6 +367,8 @@ fn test(v: &mut Vec<String>) {
 ```
 
 .line5[![Arrow](./images/Arrow.png)]
+
+Error or not?
 
 ---
 
@@ -327,7 +393,9 @@ fn test(v: &mut Vec<String>) {
 
 .errorline5[❌]
 
-Borrows extend until end of the enclosing block.
+In Rust 2015, you got an error.
+
+Borrows extended until end of the enclosing block.
 
 ---
 
@@ -340,11 +408,20 @@ fn test(v: &mut Vec<String>) {
         let s: &String = &v[v.len() - 1];
         print(s);
     }
-    v.push("World".to_string());
+    v.push("World".to_string()); ✅
 }
 ```
 
-.errorline6[✅]
+.line3[![Arrow](./images/Arrow.png)]
+
+.line6[![Arrow](./images/Arrow.png)]
+
+---
+
+# Why lexical rules?
+
+* Formalism was simpler:
+    * Lexical structure was a tree
 
 ---
 
@@ -402,24 +479,65 @@ template: a-struct
 
 .line7[![Arrow](./images/Arrow.png)]
 
-.borrowc_left[{]
+---
+
+template: a-struct
+
+.line7[![Arrow](./images/Arrow.png)]
 
 .borrowc_right[}]
+
+`data.keys` is borrowed for this region
 
 ---
 
 template: a-struct
 
-.borrowc_left[{]
+.borrowc_right[}]
+
+.line8[![Arrow](./images/Arrow.png)]
+
+`data.keys` is borrowed for this region
+
+Question: is it ok to mutate `data.stream`?
+
+
+---
+
+template: a-struct
 
 .borrowc_right[}]
 
-.errorline8[✅]
+.line8[![Arrow](./images/Arrow.png)]
 
-Disjoint access allowed:
+Answer: Yes! Disjoint access allowed:
 
 - borrowing `data.keys`
 - writing `data.stream`
+
+---
+
+# Push two elements
+
+```rust
+struct Data {
+    keys: Vec<Key>,
+    stream: Vec<Element>,
+}
+
+fn process_data(data: &mut Data) {
+    let k = &data.keys[0];
+    data.stream.push(Element::new());
+    data.stream.push(Element::new());
+    read(k);
+}
+```
+
+.line9[![Arrow](./images/Arrow.png)]
+
+What if we wanted to push two elements? 
+
+Still ok, of course.
 
 ---
 
@@ -446,7 +564,7 @@ Does this compile?
 
 ---
 
-# It depends
+# It depends on your Rust edition
 
 ---
 
@@ -467,6 +585,10 @@ a closure expression becomes a struct borrowing each free variable...
 ```rust
 // let c = || data.stream.push(Element::new());
 let c = ClosureStruct { data: &mut data };
+
+struct ClosureStruct<'d> {
+    data: &'d mut Data,
+}
 ```
 
 ---
@@ -494,9 +616,30 @@ impl FnMut<()> for ClosureStruct<'_> {
 
 ---
 
+# Make a closure
+
+```rust
+struct Data {
+    keys: Vec<Key>,
+    stream: Vec<Element>,
+}
+
+fn process_data(data: &mut Data) {
+    let k = &data.keys[0];
+    let c = || data.stream.push(Element::new());
+    c();
+    c();
+    read(k);
+}
+```
+
+.line8[![Arrow](./images/Arrow.png)]
+
+---
+
 name: make-a-closure
 
-# Make a closure
+# Desugared closure example
 
 ```rust
 struct Data {
@@ -518,24 +661,30 @@ fn process_data(data: &mut Data) {
 
 template: make-a-closure
 
-.line10[![Arrow](./images/Arrow.png)]
+.line9[![Arrow](./images/Arrow.png)]
 
 ---
 
 template: make-a-closure
 
-.borrowcd_left[{]
+.line9[![Arrow](./images/Arrow.png)]
 
-.borrowcd_right[}]
+Under original desugaring, closure mutates *entire variable* `data`
 
-.errorline9[❌]
-
-- borrowing `data.keys`
-- borrowing `data` as a whole
 
 ---
 
-# Workaround
+template: make-a-closure
+
+.line7[![Arrow](./images/Arrow.png)]
+
+Under original desugaring, closure mutates *entire variable* `data`
+
+But we have borrowed `data.keys` -- error!
+
+---
+
+# Workaround you used to need
 
 ```rust
 struct Data {
