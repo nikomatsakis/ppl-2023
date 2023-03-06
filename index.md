@@ -1359,11 +1359,19 @@ Proposal around this is under active discussion. Uses:
 
 ---
 
-# Lessons
+# Summary
 
 - "Simple language != Simple to use"
-  - Smarter, more expressive borrow checker
+  - ✅ Non-lexical Lifetimes (Rust 2018)
+  - ✅ Closures (Rust 2021)
+  - ⚙️ Polonius (Rust 2024)
+  - ❓ View types, internal references
 - "Play four-dimensional chess"
-  - Languages features to permit more evolution
+  - ✅ Limited negative reasoning
+  - ⚙️ Marker traits (Rust 2024)
+  - ⚙️ Negative impls (Rust 2024)
+  - ⚙️ Edition-dependent method dispatch (Rust 2024)
+  - ❓ Better coherence rules
 - "Everyone cares about portability...almost"
-  - Where-clauses >> conditional compilation
+  - ✅ strict usize/u32, `From`/`TryFrom`, etc
+  - ⚙️ Where-clause based portability rules (unclear)
